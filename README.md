@@ -155,14 +155,22 @@ The recommendation models are evaluated using the following metrics:
 
 When evaluating on the MovieLens dataset, the hybrid model typically outperforms individual models:
 
-| Model | RMSE | MAE | Precision@10 | Recall@10 | F1@10 |
-|-------|------|-----|-------------|-----------|-------|
-| User-based CF | ~1.02 | ~0.82 | ~0.45 | ~0.12 | ~0.19 |
-| Item-based CF | ~0.98 | ~0.78 | ~0.48 | ~0.14 | ~0.22 |
-| Content-based | ~1.10 | ~0.88 | ~0.40 | ~0.10 | ~0.16 |
-| Hybrid | ~0.94 | ~0.75 | ~0.52 | ~0.15 | ~0.23 |
+![Recommendation System Evaluation Metrics](images/metrics_table.png)
 
-*Note: Actual results may vary depending on the specific data split and parameter settings.*
+*Note: Actual results may vary depending on the specific data split and parameter settings. Lower values are better for RMSE and MAE, while higher values are better for Precision, Recall, and F1.*
+
+## System Architecture
+
+The recommendation system is built with a modular architecture that allows for easy extension and customization:
+
+![Recommendation System Architecture](images/architecture_diagram.png)
+
+The system consists of the following components:
+
+1. **Data Layer**: Handles data loading, preprocessing, and splitting into training and testing sets
+2. **Model Layer**: Contains the three recommendation approaches (User-CF, Item-CF, Content-based)
+3. **Hybrid Layer**: Combines predictions from the individual models
+4. **Web Interface**: Provides a user-friendly way to interact with the system
 
 ## Implementation Details
 
@@ -199,13 +207,17 @@ The weights are configurable parameters that can be tuned for optimal performanc
 
 ## Web Interface
 
-The web interface provides the following features:
+The web interface provides a user-friendly way to interact with the recommendation system:
+
+![Recommendation System Web Interface](images/web_interface.png)
+
+Key features include:
 
 - User selection and model selection
 - Recommendation generation with configurable number of recommendations
 - User profile viewing with demographic information and top-rated movies
 - Movie details with genre information and similar movies
-- Visual indicators for predicted ratings
+- Visual indicators for predicted ratings with color coding based on rating value
 
 ## Future Improvements
 
@@ -220,4 +232,4 @@ Potential enhancements for the system include:
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
-"# Hybrid-Recommendation-System" 
+"# Hybrid-Recommendation-System"
