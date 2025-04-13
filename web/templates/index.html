@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hybrid Recommendation System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            padding-top: 20px;
+            padding-bottom: 20px;
+        }
+        .recommendation-card {
+            margin-bottom: 15px;
+            transition: transform 0.3s;
+        }
+        .recommendation-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .rating-badge {
+            font-size: 1.2em;
+            padding: 5px 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="text-center mb-4">Hybrid Recommendation System</h1>
+        
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Get Recommendations</h5>
+                    </div>
+                    <div class="card-body">
+                        <form id="recommendationForm">
+                            <div class="mb-3">
+                                <label for="userSelect" class="form-label">Select User</label>
+                                <select class="form-select" id="userSelect" required>
+                                    <option value="" selected disabled>Choose a user...</option>
+                                    {% for user in users %}
+                                    <option value="{{ user }}">User {{ user }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="modelSelect" class="form-label">Recommendation Model</label>
+                                <select class="form-select" id="modelSelect">
+                                    <option value="hybrid" selected>Hybrid Model</option>
+                                    <option value="user_cf">User-Based Collaborative Filtering</option>
+                                    <option value="item_cf">Item-Based Collaborative Filtering</option>
+                                    <option value="content">Content-Based Filtering</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="numRecommendations" class="form-label">Number of Recommendations</label>
+                                <input type="number" class="form-control" id="numRecommendations" min="1" max="20" value="10">
+                            </div>
+                            <button type="submit" class="btn btn-primary">Get Recommendations</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>User Details</h5>
+                    </div>
+                    <div class="card-body" id="userDetails">
+                        <p class="text-center text-muted">Select a user to see details</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Recommendations</h5>
+                        <div id="modelBadge" class="badge bg-primary">Hybrid Model</div>
+                    </div>
+                    <div class="card-body">
+                        <div id="recommendationsContainer" class="row">
+                            <p class="text-center text-muted">No recommendations yet. Select a user and click "Get Recommendations".</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Movie Details Modal -->
+        <div class="modal fade" id="movieModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="movieModalTitle">Movie Details</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body" id="movieModalBody">
+                        Loading...
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const recommendationForm = document.getElementById('recommendationForm');
+            const userSelect = document.getElementById('userSelect');
+            const modelSelect = document.getElementById('modelSelect');
+            const modelBadge = document.getElementById('modelBadge');
+            const numRecommendations = document.getElementById('numRecommendations');
+            const recommendationsContainer = document.getElementById('recommendationsContainer');
+            const userDetails = document.getElementById('userDetails');
+            const movieModal = new bootstrap.Modal(document.getElementById('movieModal'));
+            
+            // Update model badge when model selection changes
+            modelSelect.addEventListener('change', function() {
+                const modelType = this.value;
+                let badgeText = '';
+                let badgeClass = 'badge ';
+                
+                switch(modelType) {
+                    case 'hybrid':
+                        badgeText = 'Hybrid Model';
+                        badgeClass += 'bg-primary';
+                        break;
+                    case 'user_cf':
+                        badgeText = 'User-Based CF';
+                        badgeClass += 'bg-success';
+                        break;
+                    case 'item_cf':
+                        badgeText = 'Item-Based CF';
+                        badgeClass += 'bg-info';
+                        break;
+                    case 'content':
+                        badgeText = 'Content-Based';
+                        badgeClass += 'bg-warning';
+                        break;
+                }
+                
+                modelBadge.textContent = badgeText;
+                modelBadge.className = badgeClass;
+            });
+            
+            // Load user details when a user is selected
+            userSelect.addEventListener('change', function() {
+                const userId = this.value;
+                if (userId) {
+                    fetch(`/user_details/${userId}`)
+                        .then(response => response.json())
+                        .then(data => {
+                            let html = `
+                                <h6>User ID: ${data.user_id}</h6>
+                                <p>Age: ${data.age}</p>
+                                <p>Gender: ${data.gender}</p>
+                                <p>Occupation: ${data.occupation}</p>
+                                <h6>Top Rated Movies:</h6>
+                            `;
+                            
+                            if (data.ratings && data.ratings.length > 0) {
+                                html += '<ul class="list-group">';
+                                data.ratings.slice(0, 5).forEach(rating => {
+                                    html += `
+                                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                                            ${rating.title}
+                                            <span class="badge bg-primary rounded-pill">${rating.rating}</span>
+                                        </li>
+                                    `;
+                                });
+                                html += '</ul>';
+                            } else {
+                                html += '<p class="text-muted">No ratings available</p>';
+                            }
+                            
+                            userDetails.innerHTML = html;
+                        })
+                        .catch(error => {
+                            console.error('Error fetching user details:', error);
+                            userDetails.innerHTML = '<p class="text-danger">Error loading user details</p>';
+                        });
+                }
+            });
+            
+            // Handle form submission for recommendations
+            recommendationForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const userId = userSelect.value;
+                const modelType = modelSelect.value;
+                const numRecs = numRecommendations.value;
+                
+                if (!userId) {
+                    alert('Please select a user');
+                    return;
+                }
+                
+                // Show loading state
+                recommendationsContainer.innerHTML = '<p class="text-center">Loading recommendations...</p>';
+                
+                // Fetch recommendations
+                fetch('/recommend', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        user_id: userId,
+                        model_type: modelType,
+                        n_recommendations: numRecs
+                    }),
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.length === 0) {
+                        recommendationsContainer.innerHTML = '<p class="text-center text-muted">No recommendations found for this user.</p>';
+                        return;
+                    }
+                    
+                    let html = '';
+                    data.forEach(item => {
+                        const rating = parseFloat(item.predicted_rating).toFixed(1);
+                        let ratingClass = 'bg-secondary';
+                        
+                        if (rating >= 4.5) ratingClass = 'bg-success';
+                        else if (rating >= 3.5) ratingClass = 'bg-primary';
+                        else if (rating >= 2.5) ratingClass = 'bg-warning';
+                        else if (rating >= 1.5) ratingClass = 'bg-danger';
+                        
+                        html += `
+                            <div class="col-md-4 col-sm-6">
+                                <div class="card recommendation-card">
+                                    <div class="card-body">
+                                        <h5 class="card-title">${item.title}</h5>
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <span class="badge ${ratingClass} rating-badge">${rating}</span>
+                                            <button class="btn btn-sm btn-outline-primary movie-details-btn" data-movie-id="${item.movie_id}">
+                                                Details
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    
+                    recommendationsContainer.innerHTML = html;
+                    
+                    // Add event listeners to movie detail buttons
+                    document.querySelectorAll('.movie-details-btn').forEach(btn => {
+                        btn.addEventListener('click', function() {
+                            const movieId = this.getAttribute('data-movie-id');
+                            showMovieDetails(movieId);
+                        });
+                    });
+                })
+                .catch(error => {
+                    console.error('Error fetching recommendations:', error);
+                    recommendationsContainer.innerHTML = '<p class="text-center text-danger">Error loading recommendations</p>';
+                });
+            });
+            
+            // Function to show movie details
+            function showMovieDetails(movieId) {
+                document.getElementById('movieModalBody').innerHTML = 'Loading...';
+                movieModal.show();
+                
+                fetch(`/movie_details/${movieId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        let genresHtml = data.genres.join(', ');
+                        
+                        let similarMoviesHtml = '';
+                        if (data.similar_movies && data.similar_movies.length > 0) {
+                            similarMoviesHtml = '<ul class="list-group">';
+                            data.similar_movies.forEach(movie => {
+                                similarMoviesHtml += `
+                                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                                        ${movie.title}
+                                        <span class="badge bg-info rounded-pill">${parseFloat(movie.similarity).toFixed(2)}</span>
+                                    </li>
+                                `;
+                            });
+                            similarMoviesHtml += '</ul>';
+                        } else {
+                            similarMoviesHtml = '<p class="text-muted">No similar movies found</p>';
+                        }
+                        
+                        const html = `
+                            <h5>${data.title}</h5>
+                            <p><strong>Release Date:</strong> ${data.release_date || 'Unknown'}</p>
+                            <p><strong>Genres:</strong> ${genresHtml}</p>
+                            <h6>Similar Movies:</h6>
+                            ${similarMoviesHtml}
+                        `;
+                        
+                        document.getElementById('movieModalTitle').textContent = data.title;
+                        document.getElementById('movieModalBody').innerHTML = html;
+                    })
+                    .catch(error => {
+                        console.error('Error fetching movie details:', error);
+                        document.getElementById('movieModalBody').innerHTML = 
+                            '<p class="text-danger">Error loading movie details</p>';
+                    });
+            }
+        });
+    </script>
+</body>
+</html>
