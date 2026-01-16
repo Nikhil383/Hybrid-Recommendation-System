@@ -157,7 +157,6 @@ When evaluating on the MovieLens dataset, the hybrid model typically outperforms
 
 ![Recommendation System Evaluation Metrics](images/metrics_table.png)
 
-*Note: Actual results may vary depending on the specific data split and parameter settings. Lower values are better for RMSE and MAE, while higher values are better for Precision, Recall, and F1.*
 
 ## System Architecture
 
