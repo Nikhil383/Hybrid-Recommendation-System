@@ -157,7 +157,6 @@ When evaluating on the MovieLens dataset, the hybrid model typically outperforms
 
 ![Recommendation System Evaluation Metrics](images/metrics_table.png)
 
-*Note: Actual results may vary depending on the specific data split and parameter settings. Lower values are better for RMSE and MAE, while higher values are better for Precision, Recall, and F1.*
 
 ## System Architecture
 
@@ -174,11 +173,17 @@ The system consists of the following components:
 
 ## Implementation Details
 
-### Collaborative Filtering
+### 1. Collaborative Filtering
 
-The collaborative filtering components use the following techniques:
+Collaborative filtering relies on the past interactions (ratings) of users to make recommendations. It assumes that users who agreed in the past will agree in the future.
 
-- **User-based CF**: Uses k-nearest neighbors to find similar users based on their rating patterns. The similarity is calculated using cosine similarity between user rating vectors.
+#### a. User-Based Collaborative Filtering (`UserBasedCF`)
+*   **Methodology**: Memory-based (Nearest Neighbors).
+*   **Logic**:
+    *   Constructs a **User-Item Matrix** where rows represent users and columns represent movies.
+    *   Uses **k-Nearest Neighbors (k-NN)** to find the most similar users to the active user based on their rating history.
+    *   **Similarity Metric**: Cosine Similarity.
+    *   **Prediction**: The predicted rating is the weighted average of the ratings given by the nearest neighbors.
 
   ```mermaid
   graph LR
@@ -189,15 +194,23 @@ The collaborative filtering components use the following techniques:
       E --> F(Weighted Average)
       F --> G[Predicted Rating]
   ```
-- **Item-based CF**: Computes item-item similarity matrix using cosine similarity between item rating vectors. Predictions are made by weighted averaging of the user's ratings for similar items.
 
-### Content-based Filtering
+#### b. Item-Based Collaborative Filtering (`ItemBasedCF`)
+*   **Methodology**: Memory-based (Item-Item Similarity).
+*   **Logic**:
+    *   Constructs an extensive **Item-Item Similarity Matrix**.
+    *   Calculates similarity between every pair of movies based on their rating vectors across all users.
+    *   **Prediction**: To predict a user's rating for a target movie, the model calculates a weighted sum of the user's *own* ratings for similar movies.
 
-The content-based filtering component:
+### 2. Content-Based Filtering
 
-- Extracts movie features from genre information (represented as binary vectors)
-- Builds user profiles based on the genres of movies they've rated highly
-- Computes similarity between user profiles and movie features to make recommendations
+Content-based filtering recommends items that are similar to those a user liked in the past, based on the item's attributes.
+
+*   **Features Used**: Movie Genres.
+*   **Logic**:
+    *   **Movie Vectors**: Represents each movie as a feature vector based on its genre classification.
+    *   **User Profiles**: Dynamically builds a profile for every user. A user's profile vector is the weighted average of the feature vectors of all movies they have rated.
+    *   **Prediction**: Calculates the Cosine Similarity between the **User Profile Vector** and a candidate **Movie Feature Vector**.
 
 ```mermaid
 graph LR
@@ -208,9 +221,14 @@ graph LR
     E --> F[Predicted Relevance]
 ```
 
-### Hybrid Model
+### 3. Hybrid Recommender System
 
-The hybrid model combines predictions from all three models using a weighted average approach:
+The Hybrid model mitigates individual model weaknesses (like the "Cold Start" problem in Collaborative Filtering) by synthesizing multiple approaches.
+
+*   **Strategy**: Weighted Linear Combination.
+*   **Formula**:
+    1.  **Collaborative Component**: `CF_Score = (w_user * User_CF_Score) + (w_item * Item_CF_Score)`
+    2.  **Final Prediction**: `Final_Score = (w_cf * CF_Score) + (w_cb * Content_Score)`
 
 ```mermaid
 graph TD
@@ -223,17 +241,7 @@ graph TD
     Sum --> Final[Final Prediction]
 ```
 
-```python
-hybrid_pred = (cf_weight * cf_pred + cb_weight * cb_pred)
-```
-
-Where `cf_pred` is itself a weighted combination of user-based and item-based CF:
-
-```python
-cf_pred = (user_cf_weight * user_cf_pred + item_cf_weight * item_cf_pred)
-```
-
-The weights are configurable parameters that can be tuned for optimal performance.
+The system uses default weights (0.7 for Collaborative, 0.3 for Content-Based) which can be tuned for optimal performance.
 
 ## Web Interface
 
