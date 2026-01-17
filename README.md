@@ -179,6 +179,16 @@ The system consists of the following components:
 The collaborative filtering components use the following techniques:
 
 - **User-based CF**: Uses k-nearest neighbors to find similar users based on their rating patterns. The similarity is calculated using cosine similarity between user rating vectors.
+
+  ```mermaid
+  graph LR
+      A[Target User] -->|History| B(User Vector)
+      D[Other Users] --> C{Find k-Nearest Neighbors}
+      B --> C
+      C -->|Top k Similar| E[Neighbor Ratings]
+      E --> F(Weighted Average)
+      F --> G[Predicted Rating]
+  ```
 - **Item-based CF**: Computes item-item similarity matrix using cosine similarity between item rating vectors. Predictions are made by weighted averaging of the user's ratings for similar items.
 
 ### Content-based Filtering
@@ -189,9 +199,29 @@ The content-based filtering component:
 - Builds user profiles based on the genres of movies they've rated highly
 - Computes similarity between user profiles and movie features to make recommendations
 
+```mermaid
+graph LR
+    A[User's Direct Ratings] -->|Aggregate Genres| B[User Profile Vector]
+    C[Candidate Movie] -->|Extract Genres| D[Movie Feature Vector]
+    B --> E{Cosine Similarity}
+    D --> E
+    E --> F[Predicted Relevance]
+```
+
 ### Hybrid Model
 
 The hybrid model combines predictions from all three models using a weighted average approach:
+
+```mermaid
+graph TD
+    Input[Input: User & Movie] --> CF[Collaborative Filtering]
+    Input --> CB[Content-Based Filtering]
+    CF -->|Weight 0.7| W1(Weighted Score CF)
+    CB -->|Weight 0.3| W2(Weighted Score CB)
+    W1 --> Sum{Add Scores}
+    W2 --> Sum
+    Sum --> Final[Final Prediction]
+```
 
 ```python
 hybrid_pred = (cf_weight * cf_pred + cb_weight * cb_pred)
